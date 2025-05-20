@@ -1,3 +1,5 @@
+import os
+import uvicorn
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from sentence_transformers import SentenceTransformer
@@ -10,7 +12,6 @@ import pytesseract
 from PIL import Image
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
-import uuid
 
 app = FastAPI()
 
@@ -47,14 +48,12 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.post("/extract_embed")
 async def extract_and_embed(file: UploadFile = File(...)):
-    # Save file temporarily
     temp_path = UPLOAD_DIR / file.filename
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     paragraphs = []
 
-    # PDF text extraction
     if temp_path.suffix.lower() == ".pdf":
         with pdfplumber.open(temp_path) as pdf:
             for page_num, page in enumerate(pdf.pages, start=1):
@@ -68,30 +67,24 @@ async def extract_and_embed(file: UploadFile = File(...)):
                             "paragraph_id": i
                         })
 
-    # Image OCR extraction
     elif temp_path.suffix.lower() in [".jpg", ".jpeg", ".png"]:
-        # Open image with PIL
         image = Image.open(temp_path)
         text = pytesseract.image_to_string(image)
         if not text.strip():
             raise HTTPException(status_code=400, detail="No text detected in image.")
-        # Split text by paragraphs (double newline)
         paras = [p.strip() for p in text.split('\n\n') if p.strip()]
         for i, para in enumerate(paras, start=1):
             paragraphs.append({
                 "text": para,
-                "page": 1,  # Images don't have pages, default to 1
+                "page": 1,
                 "paragraph_id": i
             })
-
     else:
         raise HTTPException(status_code=400, detail="Unsupported file format for extraction.")
 
-    # Generate embeddings for all paragraphs
     texts = [p["text"] for p in paragraphs]
     embeddings = model.encode(texts)
 
-    # Add embeddings to FAISS index and metadata_store
     for i, embedding in enumerate(embeddings):
         index.add(np.array([embedding]))
         metadata_store.append({
@@ -125,8 +118,6 @@ async def search(query: str, top_k: int = 5):
         })
     return {"query": query, "results": results}
 
-
-
 @app.get("/search_clustered")
 async def search_clustered(query: str, top_k: int = 10, num_clusters: int = 3):
     query_vec = model.encode([query])
@@ -147,8 +138,6 @@ async def search_clustered(query: str, top_k: int = 10, num_clusters: int = 3):
     labels = kmeans.fit_predict(matched_embeddings)
 
     clustered_output = {}
-
-    # Group embeddings and texts by cluster for labeling
     cluster_to_embeddings = {}
     cluster_to_texts = {}
 
@@ -158,18 +147,16 @@ async def search_clustered(query: str, top_k: int = 10, num_clusters: int = 3):
 
     for label in cluster_to_embeddings:
         theme_label = get_theme_label_from_centroid(
-            np.array(cluster_to_embeddings[label]), 
+            np.array(cluster_to_embeddings[label]),
             cluster_to_texts[label]
         )
-        key = f"Theme {label + 1}: {theme_label[:100]}..."  # Short label preview
-
+        key = f"Theme {label + 1}: {theme_label[:100]}..."
         if key not in clustered_output:
             clustered_output[key] = {
                 "label": key,
                 "results": []
             }
 
-    # Append results under the labeled cluster
     for label, meta in zip(labels, matched_metadata):
         theme_key = f"Theme {label + 1}: {get_theme_label_from_centroid(np.array(cluster_to_embeddings[label]), cluster_to_texts[label])[:100]}..."
         clustered_output[theme_key]["results"].append({
@@ -180,8 +167,15 @@ async def search_clustered(query: str, top_k: int = 10, num_clusters: int = 3):
         })
 
     themes = list(clustered_output.values())
-
     return {
         "query": query,
         "themes": themes
     }
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=port, reload=True)
