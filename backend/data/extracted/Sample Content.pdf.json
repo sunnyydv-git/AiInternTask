@@ -1,0 +1,7 @@
+[
+  {
+    "doc_id": "Sample Content.pdf",
+    "page": 1,
+    "paragraph": "Sample Document for PDF Text Extraction\nThis document is created to test PDF text extraction functionality in the AI backend project.\nSections:\n1. Introduction\n- Purpose of this document is to provide sample text.\n- It covers multiple paragraphs and simple formatting.\n2. Features\n- Upload PDF files.\n- Extract text using pdfplumber and OCR.\n- Store text and metadata.\n3. Conclusion\n- Successful extraction enables further processing like embeddings.\n- Ready for next development phase.\nDate: May 19, 2025\nAuthor: AI Project Team\nEnd of Document."
+  }
+]

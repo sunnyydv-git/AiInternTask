@@ -1,0 +1,7 @@
+[
+  {
+    "doc_id": "Wasserstoff AI Internship Project.pdf",
+    "page": 1,
+    "paragraph": "Wasserstoff AI Internship Project\nThis document is used to test the text extraction pipeline of our FastAPI-based backend.\nThe system should be able to read this text from a PDF file and process it correctly\nfor downstream tasks like vector embeddings and chatbot responses.\nDate: May 2025\nAuthor: Sunny Yadav"
+  }
+]
