@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+streamlit
+sentence-transformers
+faiss-cpu
+pytesseract
+pdfplumber
+Pillow
+scikit-learn
+requests
