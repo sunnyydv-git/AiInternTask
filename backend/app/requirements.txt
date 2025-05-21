@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-streamlit
 sentence-transformers
 faiss-cpu
 pytesseract
